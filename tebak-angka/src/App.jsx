@@ -1,4 +1,4 @@
-import './App.css'
+import "./App.css";
 import React, { useState, useEffect, useRef } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router";
 import io from "socket.io-client";
@@ -29,8 +29,117 @@ function App() {
   const [hasGuessedThisRound, setHasGuessedThisRound] = useState(false);
   const [playersGuessedStatus, setPlayersGuessedStatus] = useState({});
 
+  const audioFunctionsRef = useRef(null);
 
-  // Audio functions ref, Audio refs, Audio management functions, Initialize audio on component mount
+  const handleAudioReady = (audioFunctions) => {
+    audioFunctionsRef.current = audioFunctions;
+  };
+
+  const backgroundMusicRef = useRef(null);
+  const correctSoundRef = useRef(null);
+  const wrongSoundRef = useRef(null);
+  const victorySoundRef = useRef(null);
+  const defeatSoundRef = useRef(null);
+
+  const initializeAudio = () => {
+    backgroundMusicRef.current = new Audio("/sounds/background-music.mp3");
+    correctSoundRef.current = new Audio("/sounds/correct-answer.mp3");
+    wrongSoundRef.current = new Audio("/sounds/wrong-answer.mp3");
+    victorySoundRef.current = new Audio("/sounds/victory.mp3");
+    defeatSoundRef.current = new Audio("/sounds/defeat.mp3");
+
+    backgroundMusicRef.current.loop = true;
+    backgroundMusicRef.current.volume = 0.3;
+    correctSoundRef.current.volume = 0.5;
+    wrongSoundRef.current.volume = 0.5;
+    victorySoundRef.current.volume = 0.6;
+    defeatSoundRef.current.volume = 0.6;
+    victorySoundRef.current.loop = true;
+    defeatSoundRef.current.loop = true;
+  };
+
+  const playBackgroundMusic = () => {
+    if (backgroundMusicRef.current) {
+      backgroundMusicRef.current.currentTime = 0;
+      backgroundMusicRef.current
+        .play()
+        .catch((e) => console.log("Background music play failed:", e));
+    }
+  };
+
+  const stopBackgroundMusic = () => {
+    if (backgroundMusicRef.current) {
+      backgroundMusicRef.current.pause();
+      backgroundMusicRef.current.currentTime = 0;
+    }
+  };
+
+  const playCorrectSound = () => {
+    if (correctSoundRef.current) {
+      correctSoundRef.current.currentTime = 0;
+      correctSoundRef.current
+        .play()
+        .catch((e) => console.log("Correct sound play failed:", e));
+    }
+  };
+
+  const playWrongSound = () => {
+    if (wrongSoundRef.current) {
+      wrongSoundRef.current.currentTime = 0;
+      wrongSoundRef.current
+        .play()
+        .catch((e) => console.log("Wrong sound play failed:", e));
+    }
+  };
+
+  const playVictorySound = () => {
+    stopBackgroundMusic();
+    if (victorySoundRef.current) {
+      victorySoundRef.current.currentTime = 0;
+      victorySoundRef.current
+        .play()
+        .catch((e) => console.log("Victory sound play failed:", e));
+    }
+  };
+
+  const playDefeatSound = () => {
+    stopBackgroundMusic();
+    if (defeatSoundRef.current) {
+      defeatSoundRef.current.currentTime = 0;
+      defeatSoundRef.current
+        .play()
+        .catch((e) => console.log("Defeat sound play failed:", e));
+    }
+  };
+
+  const stopAllGameEndSounds = () => {
+    if (victorySoundRef.current) {
+      victorySoundRef.current.pause();
+      victorySoundRef.current.currentTime = 0;
+    }
+    if (defeatSoundRef.current) {
+      defeatSoundRef.current.pause();
+      defeatSoundRef.current.currentTime = 0;
+    }
+  };
+
+  useEffect(() => {
+    initializeAudio();
+
+    const startMusic = () => {
+      playBackgroundMusic();
+      document.removeEventListener("click", startMusic);
+      document.removeEventListener("keydown", startMusic);
+    };
+
+    document.addEventListener("click", startMusic);
+    document.addEventListener("keydown", startMusic);
+
+    return () => {
+      document.removeEventListener("click", startMusic);
+      document.removeEventListener("keydown", startMusic);
+    };
+  }, []);
 
   useEffect(() => {
     socket.on("joinedRoom", (data) => {
@@ -278,14 +387,80 @@ function App() {
     }, 100);
   };
 
-   // Props untuk komponen 
+  const gameProps = {
+    gameState,
+    playerName,
+    setPlayerName,
+    roomId,
+    isRoomMaster,
+    players,
+    currentRound,
+    totalRounds,
+    scores,
+    currentPlayer,
+    timeLeft,
+    guess,
+    setGuess,
+    message,
+    aiHint,
+    gameResult,
+    hasGuessedThisRound,
+    playersGuessedStatus,
+    joinGame,
+    startGame,
+    makeGuess,
+    requestHint,
+    resetGame,
+    socket,
+    handleAudioReady,
+  };
 
   return (
-
-    <>
-      <h1></h1>
-    </>
-  )
+    <div className="app">
+      <AudioController
+        gameState={gameState}
+        gameResult={gameResult}
+        currentPlayerId={socket.id}
+        onAudioReady={handleAudioReady}
+      />
+      <BrowserRouter>
+        <Routes>
+          <Route
+            path="/"
+            element={
+              gameState === "menu" ? (
+                <MenuPage {...gameProps} />
+              ) : gameState === "waiting" ? (
+                <MenuPage {...gameProps} />
+              ) : (
+                <Navigate to={`/${gameState}`} replace />
+              )
+            }
+          />
+          <Route
+            path="/playing"
+            element={
+              gameState === "playing" ? (
+                <GamePage {...gameProps} />
+              ) : (
+                <Navigate to="/" replace />
+              )
+            }
+          />
+          <Route
+            path="/finished"
+            element={
+              gameState === "finished" ? (
+                <ResultPage {...gameProps} />
+              ) : (
+                <Navigate to="/" replace />
+              )
+            }
+          />
+        </Routes>
+      </BrowserRouter>
+    </div>
+  );
 }
 
-export default App
+export default App;
