@@ -8,7 +8,7 @@ import MenuPage from "./pages/MenuPage";
 import GamePage from "./pages/GamePage";
 import ResultPage from "./pages/ResultPage";
 
-const socket = io("https://api.jessicarachel.site");
+const socket = io("https://tebak.jessicarachel.site");
 
 function App() {
   const [gameState, setGameState] = useState("menu");
